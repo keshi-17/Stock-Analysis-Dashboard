@@ -13,54 +13,109 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: List repository contents
+        run: |
+          echo "Repository contents:"
+          ls -la
+          echo "Checking if requirements.txt exists:"
+          if [ -f requirements.txt ]; then
+            echo "✓ requirements.txt found"
+            echo "Contents of requirements.txt:"
+            cat requirements.txt
+          else
+            echo "✗ requirements.txt NOT found"
+          fi
       
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-            
+      - name: Check Python installation
+        run: |
+          echo "Python version:"
+          python --version
+          echo "Pip version:"
+          pip --version
+          echo "Python path:"
+          which python
+          echo "Pip path:"
+          which pip
+          
       - name: Upgrade pip and install build tools
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          echo "Upgrading pip..."
+          python -m pip install --upgrade pip
+          echo "Installing build tools..."
+          pip install setuptools wheel
+          echo "Current pip version:"
+          pip --version
           
-      - name: Install system dependencies
+      - name: Install dependencies one by one (for debugging)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc g++ gfortran libopenblas-dev liblapack-dev
+          echo "Installing dependencies individually to identify problematic packages..."
           
-      - name: Install Python dependencies
-        run: |
-          echo "Installing dependencies from requirements.txt..."
-          pip install --no-cache-dir -r requirements.txt
-          echo "Dependencies installed successfully"
+          echo "Installing dash..."
+          pip install dash==2.16.1 || { echo "Failed to install dash"; exit 1; }
+          
+          echo "Installing dash-bootstrap-components..."
+          pip install dash-bootstrap-components==1.5.0 || { echo "Failed to install dash-bootstrap-components"; exit 1; }
+          
+          echo "Installing pandas..."
+          pip install pandas==2.1.4 || { echo "Failed to install pandas"; exit 1; }
+          
+          echo "Installing numpy..."
+          pip install numpy==1.25.2 || { echo "Failed to install numpy"; exit 1; }
+          
+          echo "Installing plotly..."
+          pip install plotly==5.17.0 || { echo "Failed to install plotly"; exit 1; }
+          
+          echo "Installing requests..."
+          pip install requests==2.31.0 || { echo "Failed to install requests"; exit 1; }
+          
+          echo "Installing urllib3..."
+          pip install urllib3==2.0.7 || { echo "Failed to install urllib3"; exit 1; }
+          
+          echo "Installing scipy..."
+          pip install scipy==1.11.4 || { echo "Failed to install scipy"; exit 1; }
+          
+          echo "Installing python-dateutil..."
+          pip install python-dateutil==2.8.2 || { echo "Failed to install python-dateutil"; exit 1; }
+          
+          echo "Installing pytz..."
+          pip install pytz==2023.3 || { echo "Failed to install pytz"; exit 1; }
+          
+          echo "Installing gunicorn..."
+          pip install gunicorn==21.2.0 || { echo "Failed to install gunicorn"; exit 1; }
+          
+          echo "Installing yfinance..."
+          pip install yfinance==0.2.28 || { echo "Failed to install yfinance"; exit 1; }
+          
+          echo "Installing arch..."
+          pip install arch==6.2.0 || { echo "Failed to install arch"; exit 1; }
+          
+          echo "Installing statsmodels..."
+          pip install statsmodels==0.14.1 || { echo "Failed to install statsmodels"; exit 1; }
+          
+          echo "All packages installed successfully!"
           
       - name: Verify installation
         run: |
           echo "Installed packages:"
           pip list
-          echo "Python version:"
-          python --version
-          
-      - name: Test import of main packages
-        run: |
-          python -c "import dash; print('Dash version:', dash.__version__)"
-          python -c "import pandas; print('Pandas version:', pandas.__version__)"
-          python -c "import plotly; print('Plotly version:', plotly.__version__)"
-          python -c "import yfinance; print('yfinance imported successfully')"
+          echo "Checking imports..."
+          python -c "import dash; print('✓ Dash imported successfully')"
+          python -c "import pandas; print('✓ Pandas imported successfully')"
+          python -c "import numpy; print('✓ Numpy imported successfully')"
+          python -c "import plotly; print('✓ Plotly imported successfully')"
+          python -c "import yfinance; print('✓ yfinance imported successfully')"
           
       - name: Create deployment package
         run: |
           echo "Creating deployment package..."
-          # Remove unnecessary files and create zip
           zip -r release.zip . \
             -x "*.git*" \
                "venv/*" \
@@ -71,7 +126,7 @@ jobs:
                ".coverage" \
                "*.log" \
                ".DS_Store"
-          echo "Deployment package created"
+          echo "Package created successfully"
           ls -la release.zip
           
       - name: Upload artifact for deployment jobs
