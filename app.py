@@ -11,19 +11,15 @@ from statsmodels.tsa.arima.model import ARIMA
 import warnings
 warnings.filterwarnings('ignore')
 
-# Load ticker data
 try:
     csv = pd.read_csv("ticker.csv")
     TICKERS = csv["SYMBOL"].tolist()
 except:
-    # Fallback tickers if CSV not found
     TICKERS = ['BBOX.NS', 'RELIANCE.NS', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 
                'WIPRO.NS', 'LT.NS', 'ICICIBANK.NS', 'HINDUNILVR.NS', 'BAJFINANCE.NS']
 
-# Initialize Dash app
 app = dash.Dash(__name__)
-
-# Custom CSS for dark theme
+server = app.server
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -157,7 +153,6 @@ app.index_string = '''
 </html>
 '''
 
-# Dark theme styling
 app.layout = html.Div([
     html.H1("Stock Analysis Dashboard", 
             style={
@@ -167,9 +162,7 @@ app.layout = html.Div([
                 'font-family': 'Arial, sans-serif'
             }),
     
-    # Control panel
     html.Div([
-        # Stock selector for single stock analysis
         html.Div([
             html.Label("Select Stock:", style={
                 'font-weight': 'bold',
@@ -186,7 +179,6 @@ app.layout = html.Div([
             )
         ], style={'margin': '20px', 'display': 'inline-block', 'vertical-align': 'top'}),
         
-        # Multi-stock selector for comparison
         html.Div([
             html.Label("Select Stocks for Comparison (Max 10):", style={
                 'font-weight': 'bold',
@@ -222,7 +214,6 @@ app.layout = html.Div([
         ], style={'margin': '20px', 'display': 'inline-block', 'vertical-align': 'top'}),
     ], style={'background-color': '#2F2F2F', 'padding': '15px', 'border-radius': '8px', 'margin-bottom': '20px'}),
     
-    # Tabs with dark styling
     dcc.Tabs(id="tabs", value='tab-1', 
              style={'backgroundColor': '#1F1F1F'},
              children=[
@@ -243,7 +234,6 @@ app.layout = html.Div([
                 selected_style={'backgroundColor': '#404040', 'color': '#FFFFFF'}),
     ]),
     
-    # Tab content
     html.Div(id='tab-content', style={'backgroundColor': '#1F1F1F', 'minHeight': '100vh'})
 ], style={'backgroundColor': '#1F1F1F', 'minHeight': '100vh', 'padding': '20px'})
 
@@ -287,7 +277,6 @@ def fetch_multiple_stocks_data(tickers, start_date, end_date):
     if not all_data:
         return None
     
-    # Combine all data into a single DataFrame
     combined_data = pd.DataFrame(all_data)
     return combined_data.dropna()
 
@@ -302,7 +291,6 @@ def calculate_performance_metrics(data):
     for col in data.columns:
         returns = data[col].pct_change().dropna()
         
-        # Calculate metrics
         total_return = (data[col].iloc[-1] / data[col].iloc[0] - 1) * 100
         volatility = returns.std() * np.sqrt(252) * 100
         sharpe_ratio = (returns.mean() * 252) / (returns.std() * np.sqrt(252))
@@ -372,7 +360,7 @@ def fit_garch_model(returns, max_attempts=5):
            Input('date-picker-range', 'end_date')])
 def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end_date):
     
-    if tab == 'tab-5':  # Stock Comparison Tab
+    if tab == 'tab-5':  
         if not multi_selected_tickers or len(multi_selected_tickers) < 2:
             return html.Div([
                 html.H3("Stock Comparison", style={'color': '#E0E0E0'}),
@@ -380,11 +368,9 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
                 html.P("You can select up to 10 stocks from the dropdown above.", style={'color': '#B0B0B0'})
             ], style={'padding': '20px'})
         
-        # Limit to 10 stocks
         if len(multi_selected_tickers) > 10:
             multi_selected_tickers = multi_selected_tickers[:10]
         
-        # Fetch data for multiple stocks
         comparison_data = fetch_multiple_stocks_data(multi_selected_tickers, start_date, end_date)
         
         if comparison_data is None or comparison_data.empty:
@@ -394,17 +380,14 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
                        style={'color': '#E0E0E0'})
             ], style={'padding': '20px'})
         
-        # Normalize prices for comparison
         normalized_data = normalize_prices(comparison_data)
         
-        # Calculate performance metrics
         metrics = calculate_performance_metrics(comparison_data)
         
         # Color palette for different stocks
         colors = ['#00D4FF', '#FFB347', '#FF6B6B', '#4ECDC4', '#45B7D1', 
                   '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F']
         
-        # Create price comparison chart
         fig1 = go.Figure()
         for i, col in enumerate(normalized_data.columns):
             fig1.add_trace(go.Scatter(
@@ -427,7 +410,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             font=dict(color='#E0E0E0')
         )
         
-        # Create returns comparison chart
         returns_data = comparison_data.pct_change().dropna() * 100
         
         fig2 = go.Figure()
@@ -452,7 +434,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             font=dict(color='#E0E0E0')
         )
         
-        # Create correlation heatmap
         correlation_matrix = returns_data.corr()
         
         fig3 = go.Figure(data=go.Heatmap(
@@ -476,10 +457,8 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             font=dict(color='#E0E0E0')
         )
         
-        # Create performance metrics table
         metrics_df = pd.DataFrame(metrics).T
         
-        # Performance summary cards
         summary_cards = []
         for i, (stock, data) in enumerate(metrics.items()):
             card_color = colors[i % len(colors)]
@@ -507,19 +486,16 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             html.P(f"Analysis Period: {comparison_data.index[0].strftime('%Y-%m-%d')} to {comparison_data.index[-1].strftime('%Y-%m-%d')}", 
                    style={'color': '#B0B0B0'}),
             
-            # Performance Summary Cards
             html.Div([
                 html.H4("Performance Summary", style={'color': '#E0E0E0', 'margin-bottom': '15px'}),
                 html.Div(summary_cards)
             ], style={'margin-bottom': '30px'}),
             
-            # Charts
             dcc.Graph(figure=fig1),
             dcc.Graph(figure=fig2),
             dcc.Graph(figure=fig3)
         ], style={'padding': '20px'})
     
-    # Handle other tabs (existing code)
     data = fetch_stock_data(selected_ticker, start_date, end_date)
     
     if data is None or data.empty:
@@ -532,7 +508,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
         ], style={'padding': '20px'})
     
     if tab == 'tab-1':
-        # Technical Analysis Tab
         bbox = data.copy()
         
         if len(bbox) < 200:
@@ -544,11 +519,9 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
                        style={'color': '#E0E0E0'})
             ], style={'padding': '20px'})
         
-        # Calculate moving averages
         bbox['MA 50'] = bbox[selected_ticker].rolling(window=50).mean()
         bbox['MA 200'] = bbox[selected_ticker].rolling(window=200).mean()
         
-        # Create first chart - Moving Averages
         fig1 = go.Figure()
         columns = [selected_ticker, 'MA 50', 'MA 200']
         colors = ['#00D4FF', '#FFB347', '#FF6B6B']
@@ -575,12 +548,10 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             font=dict(color='#E0E0E0')
         )
         
-        # Calculate Bollinger Bands
         bbox['middle'] = bbox[selected_ticker].rolling(window=20).mean()
         bbox['upper'] = bbox['middle'] + 2 * (bbox[selected_ticker].rolling(window=20).std())
         bbox['lower'] = bbox['middle'] - 2 * (bbox[selected_ticker].rolling(window=20).std())
         
-        # Create second chart - Bollinger Bands
         fig2 = go.Figure()
         
         fig2.add_trace(go.Scatter(
@@ -626,7 +597,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
         ], style={'padding': '20px'})
     
     elif tab == 'tab-2':
-        # Volatility Analysis Tab
         bbox = data.copy()
         returns = bbox[selected_ticker].pct_change().dropna()
         bbox['volatility'] = returns.rolling(window=30).std() * np.sqrt(252)
@@ -657,7 +627,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
         ], style={'padding': '20px'})
     
     elif tab == 'tab-3':
-        # GARCH Modeling Tab
         bbox = data.copy()
         returns = bbox[selected_ticker].pct_change().dropna()
         
@@ -728,7 +697,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             ], style={'padding': '20px'})
     
     elif tab == 'tab-4':
-        # ARIMA Forecasting Tab
         bbox = data.copy()
         price_data = bbox[selected_ticker].dropna()
         
@@ -739,41 +707,35 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
             ], style={'padding': '20px'})
         
         try:
-            # Fit ARIMA model
             model = ARIMA(price_data, order=(1, 1, 1))
             results = model.fit()
             
-            # Forecast next N steps
             n_steps = 30
             forecast = results.get_forecast(steps=n_steps)
             forecast_mean = forecast.predicted_mean
             forecast_ci = forecast.conf_int()
             
-            # Build future date index
             future_dates = pd.date_range(
                 start=price_data.index[-1], 
                 periods=n_steps + 1, 
                 freq='B'
             )[1:]
             
-            # Create plot
+            
             fig = go.Figure()
             
-            # Actual price
             fig.add_trace(go.Scatter(
                 x=price_data.index, y=price_data,
                 mode='lines', name='Actual Price',
                 line=dict(color='#00D4FF', width=2)
             ))
             
-            # Forecast price
             fig.add_trace(go.Scatter(
                 x=future_dates, y=forecast_mean,
                 mode='lines', name='Forecast Price',
                 line=dict(color='#FFB347', dash='dash', width=2)
             ))
             
-            # Confidence intervals
             fig.add_trace(go.Scatter(
                 x=future_dates, y=forecast_ci.iloc[:, 0],
                 mode='lines', name='Lower CI',
@@ -816,7 +778,6 @@ def render_content(tab, selected_ticker, multi_selected_tickers, start_date, end
                 html.P(f"Error fitting ARIMA model: {str(e)}", style={'color': '#E0E0E0'})
             ], style={'padding': '20px'})
 
-# Callback to limit multi-stock selection to 10
 @callback(
     Output('multi-stock-dropdown', 'value'),
     [Input('multi-stock-dropdown', 'value')]
