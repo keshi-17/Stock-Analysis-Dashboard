@@ -9,6 +9,7 @@ from statsmodels.tsa.stattools import acf, pacf
 from arch import arch_model
 from statsmodels.tsa.arima.model import ARIMA
 import warnings
+import os
 warnings.filterwarnings('ignore')
 
 try:
